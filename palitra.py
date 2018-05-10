@@ -79,25 +79,31 @@ class Point():
         self.cshape = cm.AARectShape((x,y), 2, 2)
 
 
-class BackgroundSprite(sprite.Sprite):
+class CocosSprite(sprite.Sprite):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if args[0]:
+            self.src = args[0]
+        else:
+            if 'image' in kwargs:
+                self.src = kwargs['image']
+
     def __copy__(self):
-        return BackgroundSprite(self.image, self.position, rotation=self.rotation, scale=self.scale,
-                                opacity=self.opacity, color=self.color, anchor=self.anchor)
+        c = self.__new__(self.__class__)
+        c.__init__(self.image, self.position, rotation=self.rotation, scale=self.scale,
+                   opacity=self.opacity, color=self.color, anchor=self.anchor)
+        c.src = self.src
+        return c
 
 
-class ObjectSprite(sprite.Sprite):
-    def __copy__(self):
-        return ObjectSprite(self.image, self.position, rotation=self.rotation, scale=self.scale,
-                            opacity=self.opacity, color=self.color, anchor=self.anchor)
+class BackgroundSprite(CocosSprite): pass
 
 
-class UndestroyableObject(sprite.Sprite):
-    def __copy__(self):
-        return UndestroyableObject(self.image, self.position, rotation=self.rotation, scale=self.scale,
-                                   opacity=self.opacity, color=self.color, anchor=self.anchor)
+class ObjectSprite(CocosSprite): pass
 
 
-class UnmovableBackground(sprite.Sprite):
-    def __copy__(self):
-        return UnmovableBackground(self.image, self.position, rotation=self.rotation, scale=self.scale,
-                                   opacity=self.opacity, color=self.color, anchor=self.anchor)
+class UndestroyableObject(CocosSprite): pass
+
+
+class UnmovableBackground(CocosSprite): pass

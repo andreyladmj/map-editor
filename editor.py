@@ -4,7 +4,7 @@ from cocos.layer import MultiplexLayer
 from pyglet.window import key
 from scene import Scene
 
-from game.map.menu import MainMenu, MapOptionMenu, ScoreMenu
+from menu import MainMenu, MapOptionMenu, ScoreMenu
 
 global keyboard, scroller
 #https://github.com/los-cocos/cocos/blob/master/samples/demo_grid_effects.py

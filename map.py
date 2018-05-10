@@ -1,40 +1,35 @@
 import pickle
 import random
 import struct
-from os import scandir, listdir
-
-from PIL import Image
 from cocos import sprite, layer
 import cocos.collision_model as cm
-from os.path import join
+from os.path import join, isfile
 
-from cocos.director import director
 from copy import copy
 
 from cocos.sprite import Sprite
-from pyglet.image import TextureRegion
 
-from game.map.BinaryMapFile import BinaryMapFile
-from game.map.utils import generate_image
+from BinaryMapFile import BinaryMapFile
+from palitra import CocosSprite, UndestroyableObject
+from utils import generate_image
 
 blockSize = 32
-
+MAP_STRUCT = struct.Struct("<25s30sii")
 
 class Map(layer.Layer):
     def __init__(self):
         super().__init__()
         self.collisions = cm.CollisionManagerBruteForce()
         self.background = None
-        self.generate_new_map()
+
+        if not self.load_map():
+            self.generate_new_map()
 
     def addBrick(self, x, y, spriteBlock):
         x = x // blockSize * blockSize
         y = y // blockSize * blockSize
 
-        if isinstance(spriteBlock, str):
-            spriteObj = Sprite(spriteBlock)
-        else:
-            spriteObj = copy(spriteBlock)
+        spriteObj = copy(spriteBlock)
 
         spriteObj.position = (x, y)
         spriteObj.cshape = cm.AARectShape(spriteObj.position, spriteObj.width//2, spriteObj.height//2)
@@ -58,18 +53,38 @@ class Map(layer.Layer):
         generate_image()
 
     def save_map(self):
-        #_MAP_STRUCT = struct.Struct("<8s30sid")
-        #file = BinaryMapFile('assets/map.bin', _MAP_STRUCT.size)
-        #c = TextureRegion()
+        with BinaryMapFile('assets/map.bin', MAP_STRUCT.size) as file:
+            file.clear()
 
-        for i in self.collisions.objs:
-            #print(i.image, i.position, i.scale, i.rotation)
-            print(i, i._animation)
-            #print(dir(i))
+            for block in self.collisions.objs:
+                x, y = block.position
+                map_struct = MAP_STRUCT.pack(
+                    block.__class__.__name__.encode("utf8"),
+                    block.src.encode("utf8"),
+                    int(x),
+                    int(y)
+                )
+                file.append(map_struct)
+
+        return True
 
     def load_map(self):
-        with open('assets/map.pickle', 'rb') as handle:
-            self = pickle.load(handle)
+        module = __import__('palitra')
+
+        if not isfile('assets/map.bin'):
+            return False
+
+        with BinaryMapFile('assets/map.bin', MAP_STRUCT.size) as file:
+            self.load_background("assets/image.png")
+            for item in file:
+                CLS, SRC, X, Y = range(4)
+                block = MAP_STRUCT.unpack(item)
+                cls = block[CLS].decode("utf8").rstrip("\x00")
+                src = block[SRC].decode("utf8").rstrip("\x00")
+
+                class_ = getattr(module, cls)
+                instance = class_(src)
+                self.addBrick(block[X], block[Y], instance)
 
     def load_background(self, src):
         exists_background = bool(self.background)
@@ -80,21 +95,25 @@ class Map(layer.Layer):
             self.add(self.background)
 
     def generate_new_map(self):
-        block_size = 32
-
         self.load_background("assets/image.png")
 
         w, h = self.background.width, self.background.height
-        top_wall = ['assets/objects/226.jpg','assets/objects/227.jpg']
-        side_wall = ['assets/objects/220.jpg','assets/objects/221.jpg']
+        top_wall = [
+            UndestroyableObject('assets/objects/226.jpg'),
+            UndestroyableObject('assets/objects/227.jpg')
+        ]
+        side_wall = [
+            UndestroyableObject('assets/objects/220.jpg'),
+            UndestroyableObject('assets/objects/221.jpg'),
+        ]
 
-        for i in range(w//block_size):
-            self.addBrick(i*32, 0, random.choice(top_wall))
-            self.addBrick(i*32, h-block_size/2, random.choice(top_wall))
+        for i in range(w//blockSize):
+            self.addBrick(i*blockSize, 0, random.choice(top_wall))
+            self.addBrick(i*blockSize, h-blockSize/2, random.choice(top_wall))
 
-        for i in range(h//block_size):
-            self.addBrick(0, i*32, random.choice(side_wall))
-            self.addBrick(w-block_size/2, i*32, random.choice(side_wall))
+        for i in range(h//blockSize):
+            self.addBrick(0, i*blockSize, random.choice(side_wall))
+            self.addBrick(w-blockSize/2, i*blockSize, random.choice(side_wall))
 
 
 class Point():

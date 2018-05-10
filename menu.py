@@ -58,7 +58,7 @@ class MapOptionMenu(Menu):
         items.append(MenuItem('Generate new Background Image', self.generate_new_background))
         items.append(MenuItem('Generate new Map', self.generate_new_map))
         items.append(MenuItem('Save Map', self.save_map))
-        items.append(MenuItem('Load Map', self.save_map))
+        items.append(MenuItem('Load Map', self.load_map))
         items.append(MenuItem('OK', self.on_quit))
         self.create_menu(items, shake(), shake_back())
 
